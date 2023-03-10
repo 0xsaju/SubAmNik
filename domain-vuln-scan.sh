@@ -28,7 +28,7 @@ read domain
 # Check for valid domains using subfinder
 echo "Running subfinder to find valid domains..."
 subfinder -d $domain -silent | sort -u > subdomains.txt
-echo "Found $(wc -l < subdomains.txt) valid domains"
+# echo "Found $(wc -l < subdomains.txt) valid domains"
 
 
 # Use amass to scan for vulnerabilities
