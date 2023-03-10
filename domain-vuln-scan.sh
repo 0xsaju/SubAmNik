@@ -39,9 +39,8 @@ echo "Completed vulnerability scan using amass. Results saved to amass.txt"
 # Use nikto to scan for vulnerabilities
 echo "Scanning for vulnerabilities using nikto..."
 while read subdomain; do
-    nikto -h $subdomain -output nikto_$subdomain.txt
+    nikto -h $subdomain -output nikto_"$subdomain".txt
 done < subdomains.txt
 echo "Completed vulnerability scan using nikto. Results saved to individual files"
 
 echo "Done"
-EOF
