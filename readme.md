@@ -3,7 +3,7 @@ This is a bash script that uses subfinder, amass, and nikto to scan a domain for
 
 ## Prerequisites
 
-* Go (required for subfinder and amass)
+* [Go](https://golang.org/dl/) (required for subfinder and amass)
 * [subfinder](https://github.com/projectdiscovery/subfinder) (can be installed using go get -u github.com/projectdiscovery/subfinder/cmd/subfinder)
 * [amass](https://github.com/OWASP/Amass) (can be installed using go get -v github.com/OWASP/Amass/v3/...)
 * [nikto](https://github.com/sullo/nikto) (can be installed using sudo apt-get update && sudo apt-get install -y nikto)
