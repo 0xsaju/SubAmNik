@@ -44,3 +44,4 @@ done < subdomains.txt
 echo "Completed vulnerability scan using nikto. Results saved to individual files"
 
 echo "Done"
+EOF
