@@ -13,7 +13,7 @@ This is a bash script that uses subfinder, amass, and nikto to scan a domain for
 1. Clone the repository:
 
 ```
-git clone https://github.com/0xsaju/domain-vuln-scan.git
+git clone https://github.com/0xsaju/SubAmNik.git
 ```
 2. Navigate to the repository directory:
 ```
