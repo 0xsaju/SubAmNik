@@ -19,6 +19,7 @@ echo "##########################################################################
 # Description: A bash script that uses subfinder, amass, and nikto to scan a
 #              domain for vulnerabilities.
 # Author: 0xsaju
+# https://linkedin.com/in/0xsaju
 # Version: v_1.0.1
 ################################################################################
 "
