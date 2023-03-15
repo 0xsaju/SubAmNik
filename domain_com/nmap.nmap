@@ -1,1 +1,0 @@
-# Nmap 7.93 scan initiated Wed Mar 15 22:39:57 2023 as: nmap -A -sV -oA domain_com/nmap domain.com
