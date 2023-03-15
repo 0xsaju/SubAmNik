@@ -39,6 +39,7 @@ directory=${target//./_}
 if [ ! -d "$directory" ]; then
   mkdir "$directory"
 fi
+
 # Define tool options
 nmap_option=1
 subdomain_option=2
@@ -88,162 +89,179 @@ run_selected_tools () {
 run_all_tools () {
     echo "Running all scan tools..."
     
-    # Nmap scan
-    echo "Running Nmap scan..."
-    nmap -A -sV $target -oA "$directory/nmap"
+    run_nmap_scan() {
+        echo "Running Nmap scan..."
+        nmap -A -sV $target -oA "$directory/nmap"
 
-    if [ $? -eq 0 ]
-    then
-        echo "Nmap scan completed successfully."
-    else
-        echo "Nmap scan failed. Exiting."
-        exit 1
-    fi
+        if [ $? -eq 0 ]
+        then
+            echo "Nmap scan completed successfully."
+        else
+            echo "Nmap scan failed. Exiting."
+            exit 1
+        fi
+    }
 
-    # Subdomain enumeration with subfinder and httpx
-    echo "Enumerating subdomains with Subfinder and Httpx..."
-    subfinder -d $target -o "$directory/subdomains.txt"
+    # Subdomain enumeration with subfinder, amass and httpx
+    run_subdomain_scan() { 
+        echo "Enumerating subdomains with Subfinder and Httpx..."
+        subfinder -d $target -o "$directory/subdomains_subfinder.txt"
 
-    if [ $? -eq 0 ]
-    then
-        echo "Subdomain enumeration completed successfully."
-    else
-        echo "Subdomain enumeration failed. Exiting."
-        exit 1
-    fi
+        if [ $? -eq 0 ]
+        then
+            echo "Subdomain enumeration completed successfully."
+        else
+            echo "Subdomain enumeration failed. Exiting."
+            exit 1
+        fi
 
-    cat "$directory/subdomains.txt" | httpx -silent -threads 200 -o "$directory/subdomains_live.txt"
+        # Amass
+        echo "Running Amass..."
+        amass enum -d $target -o "$directory/subdomains_amass.txt"
 
-    if [ $? -eq 0 ]
-    then
-        echo "Live subdomain enumeration completed successfully."
-    else
-        echo "Live subdomain enumeration failed. Exiting."
-        exit 1
-    fi
+        if [ $? -eq 0 ]
+        then
+            echo "Amass completed successfully."
+        else
+            echo "Amass failed. Exiting."
+            exit 1
+        fi
+
+        # Merge subdomains from subfinder and amass and remove duplicates
+        cat "$directory/subdomains_subfinder.txt" "$directory/subdomains_amass.txt" | sort -u > "$directory/subdomains.txt"
+
+        cat "$directory/subdomains.txt" | httpx -silent -threads 200 -o "$directory/subdomains_live.txt"
+
+        if [ $? -eq 0 ]
+        then
+            echo "Live subdomain enumeration completed successfully."
+        else
+            echo "Live subdomain enumeration failed. Exiting."
+            exit 1
+        fi
+    }
 
     # Check for subdomain takeover with Subzy
-    echo "Checking for subdomain takeover with Subzy..."
-    go/bin/subzy -targets "$directory/subdomains_live.txt" -o "$directory/subzy_takeover.txt"
+    run_subdomain_takeover() {
+        echo "Checking for subdomain takeover with Subzy..."
+        go/bin/subzy -targets "$directory/subdomains_live.txt" -o "$directory/subzy_takeover.txt"
 
-    if [ $? -eq 0 ]
-    then
-        echo "Subdomain takeover check completed successfully."
-    else
-        echo "Subdomain takeover check failed. Exiting."
-        exit 1
-    fi
+        if [ $? -eq 0 ]
+        then
+            echo "Subdomain takeover check completed successfully."
+            grep -E '^\[[\!|\?]' "$directory/subzy_takeover.txt" | awk '{print $2}' > "$directory/subzy_possible_takeover.txt"
+            echo "Possible takeover domains:"
+            cat "$directory/subzy_possible_takeover.txt"
+        else
+            echo "Subdomain takeover check failed. Exiting."
+            exit 1
+        fi
+    }
 
     # Run Nuclei scan on live subdomains
-    echo "Running Nuclei scan on live subdomains..."
-    "$nuclei_path" -l "$directory/subdomains_live.txt" \
-    -t "$nuclei_path/cnvd/*" \
-    -t "$nuclei_path/cves/*" \
-    -t "$nuclei_path/default-logins/*" \
-    -t "$nuclei_path/dns/*" \
-    -t "$nuclei_path/exposed-panels/*" \
-    -t "$nuclei_path/exposures/*" \
-    -t "$nuclei_path/file/*" \
-    -t "$nuclei_path/fuzzing/*" \
-    -t "$nuclei_path/headless/*" \
-    -t "$nuclei_path/helpers/*" \
-    -t "$nuclei_path/iot/*" \
-    -t "$nuclei_path/miscellaneous/*" \
-    -t "$nuclei_path/misconfiguration/*" \
-    -t "$nuclei_path/network/*" \
-    -t "$nuclei_path/osint/*" \
-    -t "$nuclei_path/ssl/*" \
-    -t "$nuclei_path/takeovers/*" \
-    -t "$nuclei_path/technologies/*" \
-    -t "$nuclei_path/token-spray/*" \
-    -t "$nuclei_path/vulnerabilities/*" \
-    -t "$nuclei_path/workflows/*" \
-    -rate 500 -severity high,medium,low -timeout 10s -o "$directory/target_nuclei.txt"
+    run_nuclei_scan() {
+        echo "Running Nuclei scan on live subdomains..."
+        "$nuclei_path" -l "$directory/subdomains_live.txt" \
+        -t "$nuclei_path/cnvd/*" \
+        -t "$nuclei_path/cves/*" \
+        -t "$nuclei_path/default-logins/*" \
+        -t "$nuclei_path/dns/*" \
+        -t "$nuclei_path/exposed-panels/*" \
+        -t "$nuclei_path/exposures/*" \
+        -t "$nuclei_path/file/*" \
+        -t "$nuclei_path/fuzzing/*" \
+        -t "$nuclei_path/headless/*" \
+        -t "$nuclei_path/helpers/*" \
+        -t "$nuclei_path/iot/*" \
+        -t "$nuclei_path/miscellaneous/*" \
+        -t "$nuclei_path/misconfiguration/*" \
+        -t "$nuclei_path/network/*" \
+        -t "$nuclei_path/osint/*" \
+        -t "$nuclei_path/ssl/*" \
+        -t "$nuclei_path/takeovers/*" \
+        -t "$nuclei_path/technologies/*" \
+        -t "$nuclei_path/token-spray/*" \
+        -t "$nuclei_path/vulnerabilities/*" \
+        -t "$nuclei_path/workflows/*" \
+        -rate 500 -severity high,medium,low -timeout 10s -o "$directory/target_nuclei.txt"
 
-    if [ $? -eq 0 ]
-    then
-        echo "Nuclei enumeration completed successfully."
-    else
-        echo "Nuclei enumeration failed. Exiting."
-        exit 1
-    fi
-
+        if [ $? -eq 0 ]
+        then
+            echo "Nuclei enumeration completed successfully."
+        else
+            echo "Nuclei enumeration failed. Exiting."
+            exit 1
+        fi
+    }
 
     # Directory enumeration with Dirsearch
-    echo "Running directory enumeration with Dirsearch..."
-    python3 /usr/local/bin/dirsearch.py -L "$directory/subdomains_live.txt" -e php,asp,aspx,jsp,html,txt -w /usr/local/bin/DirBuster-Lists/directory-list-2.3-medium.txt -t 50 -o "$directory/dirsearch.txt"
+    run_dirsearch() {
+        echo "Running directory enumeration with Dirsearch..."
+        python3 /usr/local/bin/dirsearch.py -L "$directory/subdomains_live.txt" -e php,asp,aspx,jsp,html,txt -w /usr/local/bin/DirBuster-Lists/directory-list-2.3-medium.txt -t 50 -o "$directory/dirsearch.txt"
 
-    if [ $? -eq 0 ]
-    then
-        echo "Directory enumeration completed successfully."
-    else
-        echo "Directory enumeration failed. Exiting."
-        exit 1
-    fi
+        if [ $? -eq 0 ]
+        then
+            echo "Directory enumeration completed successfully."
+        else
+            echo "Directory enumeration failed. Exiting."
+            exit 1
+        fi
+    }
 
     # XSS enumeration with XSStrike
-    echo "Running XSStrike..."
-    python /Users/sazzad/VAPT/XSStrike/xsstrike.py -u https://$target -l "$directory/xss.txt"
+    run_xss_enum() {
+        echo "Running XSS enumeration with XSStrike..."
+        python /Users/sazzad/VAPT/XSStrike/xsstrike.py -u https://$target -l "$directory/xss.txt"
 
-    if [ $? -eq 0 ]
-    then
-        echo "XSS enumeration completed successfully."
-    else
-        echo "XSS enumeration failed. Exiting."
-        exit 1
-    fi
-
+        if [ $? -eq 0 ]
+        then
+            echo "XSS enumeration completed successfully."
+        else
+            echo "XSS enumeration failed. Exiting."
+            exit 1
+        fi
+    }
 
     # Recon-ng
-    echo "Running recon-ng..."
-    recon-ng -r "$directory/recon-ng.txt" -x "workspace $target; set SOURCE $target; set DOMAIN $target; set COMPANY_NAME $target; set NAMESERVER 8.8.8.8; set BING_API_KEY <insert api key>; set GOOGLE_API_KEY <insert api key>; set FULLCONTACT_API_KEY <insert api key>; set HUNTER_API_KEY <insert api key>; set PASSWORDS <insert passwords file>; run all; exit;"
+    run_reconng() {
+        echo "Running Recon-ng..."
+        recon-ng -r "$directory/recon-ng.txt" -x "workspace $target; set SOURCE $target; set DOMAIN $target; set COMPANY_NAME $target; set NAMESERVER 8.8.8.8; set BING_API_KEY <insert api key>; set GOOGLE_API_KEY <insert api key>; set FULLCONTACT_API_KEY <insert api key>; set HUNTER_API_KEY <insert api key>; set PASSWORDS <insert passwords file>; run all; exit;"
 
-    if [ $? -eq 0 ]
-    then
-        echo "Recon-ng completed successfully."
-    else
-        echo "Recon-ng failed. Exiting."
-        exit 1
-    fi
+        if [ $? -eq 0 ]
+        then
+            echo "Recon-ng completed successfully."
+        else
+            echo "Recon-ng failed. Exiting."
+            exit 1
+        fi
+    }
 
     # Directory enumeration with Dirsearch
-    echo "Running directory enumeration with Dirsearch..."
-    python3 /Users/sazzad/VAPT/dirsearch/dirsearch.py -L "$directory/subdomains_live.txt" -e php,asp,aspx,jsp,html,txt -w /usr/local/bin/DirBuster-Lists/directory-list-2.3-medium.txt -t 50 -o "$directory/dirsearch.txt"
+    run_dirsearch(){
+        echo "Running directory enumeration with Dirsearch..."
+        python3 /Users/sazzad/VAPT/dirsearch/dirsearch.py -L "$directory/subdomains_live.txt" -e php,asp,aspx,jsp,html,txt -w /usr/local/bin/DirBuster-Lists/directory-list-2.3-medium.txt -t 50 -o "$directory/dirsearch.txt"
 
-    if [ $? -eq 0 ]
-    then
-        echo "Directory enumeration completed successfully."
-    else
-        echo "Directory enumeration failed. Exiting."
-        exit 1
-    fi
+        if [ $? -eq 0 ]
+        then
+            echo "Directory enumeration completed successfully."
+        else
+            echo "Directory enumeration failed. Exiting."
+            exit 1
+        fi
+    }
 
+    #  Aquatone
+    # echo "Running Aquatone..."
+    # cat "$directory/subdomains_live.txt" | aquatone -out "$directory/aquatone"
 
-    # Amass
-    echo "Running Amass..."
-    amass enum -d $target -o "$directory/amass.txt"
-
-    if [ $? -eq 0 ]
-    then
-        echo "Amass completed successfully."
-    else
-        echo "Amass failed. Exiting."
-        exit 1
-    fi
-
-    # Aquatone
-    echo "Running Aquatone..."
-    cat "$directory/subdomains_live.txt" | aquatone -out "$directory/aquatone"
-
-    if [ $? -eq 0 ]
-    then
-        echo "Aquatone completed successfully."
-    else
-        echo "Aquatone failed. Exiting."
-        exit 1
-    fi
+    # if [ $? -eq 0 ]
+    # then
+    #     echo "Aquatone completed successfully."
+    # else
+    #     echo "Aquatone failed. Exiting."
+    #     exit 1
+    # fi
 }
-
 
 # Main program
 show_banner
