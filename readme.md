@@ -1,23 +1,6 @@
 # SubAmNik Domain Vulnerability Scanner
 This is a bash script that uses subfinder, amass, and nikto to scan a domain for vulnerabilities.
-   _____       __    ___              _   ___ __  
-  / ___/__  __/ /_  /   |  ____ ___  / | / (_) /__
-  \__ \/ / / / __ \/ /| | / __ \`__\/  |/ / / //_/
- ___/ / /_/ / /_/ / ___ |/ / / / / / /|  / / ,<   
-/____/\__,_/_.___/_/  |_/_/ /_/ /_/_/ |_/_/_/|_|_v2.0.1 
-
-#################################################################################################################
-# Tools Name: SubAmNik                                                                                          #
-# Description: # This script is designed to automate various security tests for a target domain.It takes the    #
-#                target domain as  input,  creates an output directory, and runs a series of tests including    #
-#                Nmap scan,  subdomain enumeration, subdomain takeover, Nuclei scan, directory  enumeration,    #
-#                XSS enumeration, and recon-ng. The script also checks if each test was successful and exits    #
-#                if any test fails.                                                                             #
-# Author: 0xsaju                                                                                                #
-# https://linkedin.com/in/0xsaju                                                                                #
-# Version: v_2.0.1                                                                                              #
-#################################################################################################################
-
+ 
 ## Prerequisites
 
 * [Go](https://golang.org/dl/) (required for subfinder and amass)
